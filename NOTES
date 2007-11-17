@@ -1,0 +1,19 @@
+Usage:
+
+#include <cu.h>
+
+TEST(testFunction){
+}
+
+TEST_SUITE(testSuiteName){
+    TEST_ADD(testFunction),
+    TEST_SUITE_ADD(testSuite2),
+    CLOSURE
+}
+
+
+int main(int argc, char *argv[])
+{
+    RUN_TEST_SUITE(testSuiteName);
+}
+
