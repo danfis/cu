@@ -49,7 +49,8 @@ void cu_success_assertation(void)
 void cu_fail_assertation(const char *file, int line, const char *msg)
 {
     cu_fail_checks++;
-    fprintf(stderr, "%s:%d :: %s\n", file, line, msg);
+    fprintf(stderr, "%s:%d (%s::%s) :: %s\n", file, line,
+            cu_current_test_suite, cu_current_test, msg);
     fflush(stderr);
 }
 

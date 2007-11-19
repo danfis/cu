@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -pedantic
+CFLAGS = -Wall -pedantic -march=k8 -mtune=k8 -msse2 -O2 -pipe
 LDFLAGS =
 
 TARGETS = libcu.a
