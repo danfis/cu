@@ -49,6 +49,12 @@ typedef struct _cu_test_suite_t {
 
 #define PRINT_RESULTS cu_print_results()
 
+/**
+ * Set prefix for files printed out. Must contain trailing /.
+ */
+#define CU_SET_OUT_PREFIX(str) \
+    cu_set_out_prefix(str)
+
 extern const char *cu_current_test;
 extern const char *cu_current_test_suite;
 
@@ -64,11 +70,14 @@ extern int cu_fail_checks;
  */
 extern FILE *cu_stdout;
 extern FILE *cu_stderr;
+#define CU_OUT_PREFIX_LENGTH 30
+extern char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1];
 
 void cu_run(const char *ts_name, cu_test_suite_t *test_suite);
 void cu_success_assertation(void);
 void cu_fail_assertation(const char *file, int line, const char *msg);
 void cu_print_results(void);
+void cu_set_out_prefix(const char *str);
 
 /**********  assertations **********/
 /*@{*/

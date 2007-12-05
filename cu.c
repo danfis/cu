@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cu.h"
 
@@ -14,6 +15,7 @@ int cu_fail_checks = 0;
 
 FILE *cu_stdout;
 FILE *cu_stderr;
+char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1] = "";
 
 static void cu_set_out_err(const char *testName);
 static void cu_reset_out_err(void);
@@ -84,6 +86,10 @@ void cu_print_results(void)
     fprintf(cu_stdout, "==================================================\n");
 }
 
+void cu_set_out_prefix(const char *str)
+{
+    strncpy(cu_out_prefix, str, CU_OUT_PREFIX_LENGTH);
+}
 
 static void cu_set_out_err(const char *test_name)
 {
@@ -92,14 +98,14 @@ static void cu_set_out_err(const char *test_name)
     cu_stdout = stdout;
     cu_stderr = stderr;
 
-    snprintf(buf, 99, "tmp.%s.out", test_name);
+    snprintf(buf, 99, "%stmp.%s.out", cu_out_prefix, test_name);
     stdout = fopen(buf, "w");
     if (stdout == NULL){
         fprintf(cu_stderr, "Creating file %s failed! Exiting...\n", buf);
         exit(-1);
     }
 
-    snprintf(buf, 99, "tmp.%s.err", test_name);
+    snprintf(buf, 99, "%stmp.%s.err", cu_out_prefix, test_name);
     stderr = fopen(buf, "w");
     if (stderr == NULL){
         fprintf(cu_stderr, "Creating file %s failed! Exiting...\n", buf);
