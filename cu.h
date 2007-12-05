@@ -59,6 +59,12 @@ extern int cu_fail_tests;
 extern int cu_success_checks;
 extern int cu_fail_checks;
 
+/**
+ * Always points to stdout and stderr.
+ */
+extern FILE *cu_stdout;
+extern FILE *cu_stderr;
+
 void cu_run(const char *ts_name, cu_test_suite_t *test_suite);
 void cu_success_assertation(void);
 void cu_fail_assertation(const char *file, int line, const char *msg);
