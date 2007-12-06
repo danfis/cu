@@ -1,0 +1,28 @@
+#!/bin/bash
+
+DIR="$1"
+TMP="/tmp/$$.regression.test"
+RET=0
+
+for file in $(ls tmp.*); do
+    file_orig=${file#tmp.}
+
+    if [ -f "$file_orig" ]; then
+        echo -ne "Comparing $file and $file_orig:"
+        diff $file_orig $file >$TMP 2>&1;
+        if [ $? -eq 0 ]; then
+            echo -ne " \033[0;32mOK\033[0;0m\n";
+        else
+            echo -ne " \033[0;31mFAILED\033[0;0m\n";
+            echo "diff $file_orig $file:"
+            cat $TMP;
+            RET=1
+        fi
+    else
+        echo "Can't compare $file $file_orig, bacause $file_orig does not exist!"
+        RET=1
+    fi
+done;
+
+rm -f $TMP
+exit $RET
