@@ -19,5 +19,6 @@ clean:
 	rm -f *.o
 	rm -f test
 	rm -f $(TARGETS)
+	rm -f tmp.*
 
 .PHONY: all clean
