@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -pedantic -O2 -pipe
+CFLAGS = -g -Wall -pedantic
 LDFLAGS =
 
 TARGETS = libcu.a
