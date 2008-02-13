@@ -169,7 +169,7 @@ static void receive_messages(void)
     int i;
     int end = 0; /* end of messages? */
 
-    while((buf_read = read(fd, buf, BUF_LEN)) != -1 && !end){
+    while((buf_read = read(fd, buf, BUF_LEN)) > 0 && !end){
         for (i=0; i < buf_read; i++){
 
             /* copy msg to stderr */
