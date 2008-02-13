@@ -65,11 +65,6 @@ extern int cu_fail_tests;
 extern int cu_success_checks;
 extern int cu_fail_checks;
 
-/**
- * Always points to stdout and stderr.
- */
-extern FILE *cu_stdout;
-extern FILE *cu_stderr;
 #define CU_OUT_PREFIX_LENGTH 30
 extern char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1];
 

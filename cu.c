@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 
 #include "cu.h"
 
@@ -35,77 +36,212 @@ int cu_fail_tests = 0;
 int cu_success_checks = 0;
 int cu_fail_checks = 0;
 
-FILE *cu_stdout;
-FILE *cu_stderr;
 char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1] = "";
 
-static void cu_set_out_err(const char *testName);
-static void cu_reset_out_err(void);
 
-void cu_run(const char *ts_name, cu_test_suite_t *test_suite)
+/* globally used file descriptor for reading/writing messages */
+int fd;
+
+/* indicate if test was failed */
+int test_failed;
+
+/* codes of messages */
+#define CHECK_FAILED '0'
+#define CHECK_SUCCEED '1'
+#define TEST_FAILED '2'
+#define TEST_SUCCEED '3'
+#define TEST_SUITE_FAILED '4'
+#define TEST_SUITE_SUCCEED '5'
+#define END '6'
+
+/* predefined messages */
+#define MSG_CHECK_SUCCEED write(fd, "1\n", 2)
+#define MSG_TEST_FAILED write(fd, "2\n", 2)
+#define MSG_TEST_SUCCEED write(fd, "3\n", 2)
+#define MSG_TEST_SUITE_FAILED write(fd, "4\n", 2)
+#define MSG_TEST_SUITE_SUCCEED write(fd, "5\n", 2)
+#define MSG_END write(fd, "6\n", 2)
+
+/* length of buffers */
+#define BUF_LEN 100
+
+
+static void redirect_out_err(const char *testName);
+static void close_out_err(void);
+static void run_test_suite(const char *ts_name, cu_test_suite_t *ts);
+static void receive_messages(void);
+
+void cu_run(const char *ts_name, cu_test_suite_t *ts)
 {
-    cu_test_suite_t *current = test_suite;
-    int fail_tests = cu_fail_tests;
-    int fail_checks;
+    int pipefd[2];
+    int pid;
 
+    if (pipe(pipefd) == -1){
+        perror("Pipe error");
+        exit(-1);
+    }
+
+    fprintf(stdout, " -> %s [IN PROGESS]\n", ts_name);
+    fflush(stdout);
+
+    pid = fork();
+    if (pid < 0){
+        perror("Fork error");
+        exit(-1);
+    }
+
+    if (pid == 0){
+        /* close read end of pipe */
+        close(pipefd[0]);
+
+        fd = pipefd[1];
+
+        /* run testsuite, messages go to fd */
+        run_test_suite(ts_name, ts);
+
+        MSG_END;
+        close(fd);
+    }else{
+        /* close write end of pipe */
+        close(pipefd[1]);
+
+        fd = pipefd[0];
+
+        /* receive and interpret all messages */
+        receive_messages();
+
+        /* wait for children */
+        wait(NULL);
+
+        close(fd);
+
+        fprintf(stdout, " -> %s [DONE]\n\n", ts_name);
+        fflush(stdout);
+    }
+
+}
+
+static void run_test_suite(const char *ts_name, cu_test_suite_t *ts)
+{
+    int test_suite_failed = 0;
+
+    /* set up current test suite name for later messaging... */
     cu_current_test_suite = ts_name;
 
-    cu_set_out_err(cu_current_test_suite);
+    /* redirect stdout and stderr */
+    redirect_out_err(cu_current_test_suite);
 
-    while (current->name != NULL && current->func != NULL){
-        fail_checks = cu_fail_checks;
-        cu_current_test = current->name;
+    while (ts->name != NULL && ts->func != NULL){
+        test_failed = 0;
 
-        (*(current->func))();
+        /* set up name of test for later messaging */
+        cu_current_test = ts->name;
 
-        if (cu_fail_checks > fail_checks){
-            cu_fail_tests++;
+        /* run test */
+        (*(ts->func))();
+
+        if (test_failed){
+            MSG_TEST_FAILED;
+            test_suite_failed = 1;
         }else{
-            cu_success_tests++;
+            MSG_TEST_SUCCEED;
         }
 
-        current++;
+        ts++; /* next test in test suite */
     }
 
-    if (cu_fail_tests > fail_tests){
-        cu_fail_test_suites++;
+    if (test_suite_failed){
+        MSG_TEST_SUITE_FAILED;
     }else{
-        cu_success_test_suites++;
+        MSG_TEST_SUITE_SUCCEED;
     }
 
-    cu_reset_out_err();
+    /* close redirected stdout and stderr */
+    close_out_err();
 }
 
 
+static void receive_messages(void)
+{
+    char buf[BUF_LEN]; /* buffer */
+    int buf_read; /* how many chars stored in buf */
+    int state = 0; /* 0 - waiting for code, 1 - copy msg to stdout */
+    int i;
+    int end = 0; /* end of messages? */
+
+    while((buf_read = read(fd, buf, BUF_LEN)) != -1 && !end){
+        for (i=0; i < buf_read; i++){
+
+            /* copy msg to stderr */
+            if (state == 1){
+                fprintf(stdout, "%c", buf[i]);
+                fflush(stdout);
+            }
+
+            /* reset on '\n' in msg */
+            if (buf[i] == '\n'){
+                state = 0;
+                continue;
+            }
+
+            if (state == 0){
+                if (buf[i] == CHECK_FAILED){
+                    cu_fail_checks++;
+                    state = 1;
+                }else if (buf[i] == CHECK_SUCCEED){
+                    cu_success_checks++;
+                }else if (buf[i] == TEST_FAILED){
+                    cu_fail_tests++;
+                }else if (buf[i] == TEST_SUCCEED){
+                    cu_success_checks++;
+                }else if (buf[i] == TEST_SUITE_FAILED){
+                    cu_fail_test_suites++;
+                }else if (buf[i] == TEST_SUITE_SUCCEED){
+                    cu_success_test_suites++;
+                }else if (buf[i] == END){
+                    end = 1;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void cu_success_assertation(void)
 {
-    cu_success_checks++;
+    MSG_CHECK_SUCCEED;
 }
 
 void cu_fail_assertation(const char *file, int line, const char *msg)
 {
-    cu_fail_checks++;
-    fprintf(cu_stderr, "%s:%d (%s::%s) :: %s\n", file, line,
-            cu_current_test_suite, cu_current_test, msg);
-    fflush(cu_stderr);
+    char buf[BUF_LEN];
+    int len;
+
+    len = snprintf(buf, BUF_LEN, "%c%s:%d (%s::%s) :: %s\n",
+            CHECK_FAILED,
+            file, line, cu_current_test_suite, cu_current_test, msg);
+    write(fd, buf, len);
+
+    /* enable test_failed flag */
+    test_failed = 1;
 }
 
 void cu_print_results(void)
 {
-    fprintf(cu_stdout, "\n");
-    fprintf(cu_stdout, "==================================================\n");
-    fprintf(cu_stdout, "|               |  failed  |  succeed  |  total  |\n");
-    fprintf(cu_stdout, "|------------------------------------------------|\n");
-    fprintf(cu_stdout, "| assertations: |  %6d  |  %7d  |  %5d  |\n",
+    fprintf(stdout, "\n");
+    fprintf(stdout, "==================================================\n");
+    fprintf(stdout, "|               |  failed  |  succeed  |  total  |\n");
+    fprintf(stdout, "|------------------------------------------------|\n");
+    fprintf(stdout, "| assertations: |  %6d  |  %7d  |  %5d  |\n",
                 cu_fail_checks, cu_success_checks,
                 cu_success_checks+cu_fail_checks);
-    fprintf(cu_stdout, "| tests:        |  %6d  |  %7d  |  %5d  |\n",
+    fprintf(stdout, "| tests:        |  %6d  |  %7d  |  %5d  |\n",
                 cu_fail_tests, cu_success_tests,
                 cu_success_tests+cu_fail_tests);
-    fprintf(cu_stdout, "| tests suites: |  %6d  |  %7d  |  %5d  |\n",
+    fprintf(stdout, "| tests suites: |  %6d  |  %7d  |  %5d  |\n",
                 cu_fail_test_suites, cu_success_test_suites,
                 cu_success_test_suites+cu_fail_test_suites);
-    fprintf(cu_stdout, "==================================================\n");
+    fprintf(stdout, "==================================================\n");
 }
 
 void cu_set_out_prefix(const char *str)
@@ -113,33 +249,25 @@ void cu_set_out_prefix(const char *str)
     strncpy(cu_out_prefix, str, CU_OUT_PREFIX_LENGTH);
 }
 
-static void cu_set_out_err(const char *test_name)
+static void redirect_out_err(const char *test_name)
 {
     char buf[100];
 
-    cu_stdout = stdout;
-    cu_stderr = stderr;
-
     snprintf(buf, 99, "%stmp.%s.out", cu_out_prefix, test_name);
-    stdout = fopen(buf, "w");
-    if (stdout == NULL){
-        fprintf(cu_stderr, "Creating file %s failed! Exiting...\n", buf);
+    if (freopen(buf, "w", stdout) == NULL){
+        perror("Redirecting of stdout failed");
         exit(-1);
     }
 
     snprintf(buf, 99, "%stmp.%s.err", cu_out_prefix, test_name);
-    stderr = fopen(buf, "w");
-    if (stderr == NULL){
-        fprintf(cu_stderr, "Creating file %s failed! Exiting...\n", buf);
+    if (freopen(buf, "w", stderr) == NULL){
+        perror("Redirecting of stderr failed");
         exit(-1);
     }
 }
 
-static void cu_reset_out_err(void)
+static void close_out_err(void)
 {
     fclose(stdout);
     fclose(stderr);
-
-    stdout = cu_stdout;
-    stderr = cu_stderr;
 }
