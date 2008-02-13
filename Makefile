@@ -1,6 +1,5 @@
 CC = gcc
 CFLAGS = -g -Wall -pedantic
-LDFLAGS =
 
 TARGETS = libcu.a
 
@@ -10,15 +9,22 @@ libcu.a: cu.o
 	ar cr $@ $^
 	ranlib $@
 cu.o: cu.c cu.h
-	$(CC) $(CFLAGS) -c -o $@ $< $(LDFLAGS)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-test: test.c cu.c
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+test: test.c libcu.a
+	$(CC) $(CFLAGS) -o $@ $^ -L./ -lcu
+
+check: test
+	mkdir -p regressions
+	touch regressions/testSuiteName{,2}.{out,err}
+	./test
+	cd regressions && ../check-regressions
 
 clean:
 	rm -f *.o
 	rm -f test
 	rm -f $(TARGETS)
 	rm -f tmp.*
+	rm -rf regressions
 
-.PHONY: all clean
+.PHONY: all clean check

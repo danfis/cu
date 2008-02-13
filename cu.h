@@ -23,30 +23,38 @@
 #ifndef _CU_H_
 #define _CU_H_
 
-#include <unistd.h>
-
-#define CU_MAX_NAME_LENGTH 30
-
-typedef void (*cu_test_func_t)(void);
-typedef struct _cu_test_suite_t {
-    const char *name;
-    cu_test_func_t func;
-} cu_test_suite_t;
-
-
+/***** PUBLIC API *****/
+/**
+ * Define test
+ */
 #define TEST(name) \
     void name(void)
 
+/**
+ * Define testsuite
+ */
 #define TEST_SUITE(name) \
     cu_test_suite_t test_suite_##name[] =
+/**
+ * Must be on the end of list of tests.
+ */
 #define TEST_SUITE_CLOSURE \
     { NULL, NULL }
+/**
+ * Add test to testsuite
+ */
 #define TEST_ADD(name) \
     { #name, name }
 
+/**
+ * Run given testsuite
+ */
 #define RUN(name) \
     cu_run(#name, test_suite_##name);
 
+/**
+ * Print counted results
+ */
 #define PRINT_RESULTS cu_print_results()
 
 /**
@@ -55,30 +63,9 @@ typedef struct _cu_test_suite_t {
 #define CU_SET_OUT_PREFIX(str) \
     cu_set_out_prefix(str)
 
-extern const char *cu_current_test;
-extern const char *cu_current_test_suite;
-
-extern int cu_success_test_suites;
-extern int cu_fail_test_suites;
-extern int cu_success_tests;
-extern int cu_fail_tests;
-extern int cu_success_checks;
-extern int cu_fail_checks;
-
-#define CU_OUT_PREFIX_LENGTH 30
-extern char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1];
-
-void cu_run(const char *ts_name, cu_test_suite_t *test_suite);
-void cu_success_assertation(void);
-void cu_fail_assertation(const char *file, int line, const char *msg);
-void cu_print_results(void);
-void cu_set_out_prefix(const char *str);
-
-/**********  assertations **********/
-/*@{*/
 /**
- * \name Assertations
- * Assertations with suffix 'M' (e.g.\ assertTrueM) is variation of macro
+ * Assertations
+ * Assertations with suffix 'M' (e.g. assertTrueM) is variation of macro
  * where is possible to specify error message.
  */
 #define assertTrueM(a, message) \
@@ -104,5 +91,37 @@ void cu_set_out_prefix(const char *str);
     assertTrueM((a) != (b), message)
 #define assertNotEquals(a,b) \
     assertNotEqualsM((a), (b), #a " equals " #b)
+/***** PUBLIC API END *****/
+
+
+#include <unistd.h>
+
+#define CU_MAX_NAME_LENGTH 30
+
+typedef void (*cu_test_func_t)(void);
+typedef struct _cu_test_suite_t {
+    const char *name;
+    cu_test_func_t func;
+} cu_test_suite_t;
+
+
+extern const char *cu_current_test;
+extern const char *cu_current_test_suite;
+
+extern int cu_success_test_suites;
+extern int cu_fail_test_suites;
+extern int cu_success_tests;
+extern int cu_fail_tests;
+extern int cu_success_checks;
+extern int cu_fail_checks;
+
+#define CU_OUT_PREFIX_LENGTH 30
+extern char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1];
+
+void cu_run(const char *ts_name, cu_test_suite_t *test_suite);
+void cu_success_assertation(void);
+void cu_fail_assertation(const char *file, int line, const char *msg);
+void cu_print_results(void);
+void cu_set_out_prefix(const char *str);
 
 #endif
