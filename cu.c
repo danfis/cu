@@ -63,7 +63,7 @@ int test_failed;
 #define MSG_END write(fd, "6\n", 2)
 
 /* length of buffers */
-#define BUF_LEN 100
+#define BUF_LEN 1000
 
 
 static void redirect_out_err(const char *testName);
