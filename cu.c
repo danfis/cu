@@ -193,7 +193,7 @@ static void receive_messages(void)
                 }else if (buf[i] == TEST_FAILED){
                     cu_fail_tests++;
                 }else if (buf[i] == TEST_SUCCEED){
-                    cu_success_checks++;
+                    cu_success_tests++;
                 }else if (buf[i] == TEST_SUITE_FAILED){
                     cu_fail_test_suites++;
                 }else if (buf[i] == TEST_SUITE_SUCCEED){
