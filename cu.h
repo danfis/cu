@@ -40,22 +40,22 @@
  */
 #define TEST_SUITE_CLOSURE \
     { NULL, NULL }
+
+#define TEST_SUITES \
+    cu_test_suites_t cu_test_suites[] =
+#define TEST_SUITES_CLOSURE \
+    { NULL, NULL }
+#define TEST_SUITE_ADD(name) \
+    { #name, test_suite_##name }
+
 /**
  * Add test to testsuite
  */
 #define TEST_ADD(name) \
     { #name, name }
 
-/**
- * Run given testsuite
- */
-#define RUN(name) \
-    cu_run(#name, test_suite_##name);
-
-/**
- * Print counted results
- */
-#define PRINT_RESULTS cu_print_results()
+#define CU_RUN(argc, argv) \
+    cu_run(argc, argv)
 
 /**
  * Set prefix for files printed out. Must contain trailing /.
@@ -103,7 +103,15 @@ typedef struct _cu_test_suite_t {
     const char *name;
     cu_test_func_t func;
 } cu_test_suite_t;
+typedef struct _cu_test_suites_t {
+    const char *name;
+    cu_test_suite_t *test_suite;
+} cu_test_suites_t;
 
+/**
+ * This must be define in users source code.
+ */
+extern cu_test_suites_t cu_test_suites[];
 
 extern const char *cu_current_test;
 extern const char *cu_current_test_suite;
@@ -118,10 +126,9 @@ extern int cu_fail_checks;
 #define CU_OUT_PREFIX_LENGTH 30
 extern char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1];
 
-void cu_run(const char *ts_name, cu_test_suite_t *test_suite);
+void cu_run(int argc, char *argv[]);
 void cu_success_assertation(void);
 void cu_fail_assertation(const char *file, int line, const char *msg);
-void cu_print_results(void);
 void cu_set_out_prefix(const char *str);
 
 #endif

@@ -71,7 +71,48 @@ static void close_out_err(void);
 static void run_test_suite(const char *ts_name, cu_test_suite_t *ts);
 static void receive_messages(void);
 
-void cu_run(const char *ts_name, cu_test_suite_t *ts)
+static void cu_run_fork(const char *ts_name, cu_test_suite_t *test_suite);
+static void cu_print_results(void);
+
+void cu_run(int argc, char *argv[])
+{
+    cu_test_suites_t *tss;
+    int i;
+    char found = 0;
+
+    if (argc > 1){
+        for (i=1; i < argc; i++){
+            tss = cu_test_suites;
+            while (tss->name != NULL && tss->test_suite != NULL){
+                if (strcmp(argv[i], tss->name) == 0){
+                    found = 1;
+                    cu_run_fork(tss->name, tss->test_suite);
+                    break;
+                }
+                tss++;
+            }
+
+            if (tss->name == NULL || tss->test_suite == NULL){
+                fprintf(stderr, "ERROR: Could not find test suite '%s'\n", argv[i]);
+            }
+        }
+
+        if (found == 1)
+            cu_print_results();
+
+    }else{
+        tss = cu_test_suites;
+        while (tss->name != NULL && tss->test_suite != NULL){
+            cu_run_fork(tss->name, tss->test_suite);
+            tss++;
+        }
+        cu_print_results();
+    }
+
+
+}
+
+static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
 {
     int pipefd[2];
     int pid;
@@ -226,7 +267,7 @@ void cu_fail_assertation(const char *file, int line, const char *msg)
     test_failed = 1;
 }
 
-void cu_print_results(void)
+static void cu_print_results(void)
 {
     fprintf(stdout, "\n");
     fprintf(stdout, "==================================================\n");
