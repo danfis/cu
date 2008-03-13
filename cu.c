@@ -27,6 +27,9 @@
 
 #include "cu.h"
 
+/** Declared here, because I didn't find header file where it is declared */
+char *strsignal(int sig);
+
 const char *cu_current_test;
 const char *cu_current_test_suite;
 int cu_success_test_suites = 0;
@@ -116,6 +119,7 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
 {
     int pipefd[2];
     int pid;
+    int status;
 
     if (pipe(pipefd) == -1){
         perror("Pipe error");
@@ -152,7 +156,15 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
         receive_messages();
 
         /* wait for children */
-        wait(NULL);
+        wait(&status);
+        if (!WIFEXITED(status)){ /* if child process ends up abnormaly */
+            if (WIFSIGNALED(status)){
+                fprintf(stdout, "Test suite was terminated by signal %d (%s).\n",
+                        WTERMSIG(status), strsignal(WTERMSIG(status)));
+            }else{
+                fprintf(stdout, "Test suite terminated abnormaly!\n");
+            }
+        }
 
         close(fd);
 
