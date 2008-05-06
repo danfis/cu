@@ -3,6 +3,8 @@ CFLAGS = -g -Wall -pedantic
 
 TARGETS = libcu.a
 
+TEST_OBJS = test.o test2.o
+
 all: $(TARGETS)
 
 libcu.a: cu.o
@@ -11,14 +13,18 @@ libcu.a: cu.o
 cu.o: cu.c cu.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-test: test.c libcu.a
-	$(CC) $(CFLAGS) -o $@ $^ -L./ -lcu
+test: $(TEST_OBJS) libcu.a
+	$(CC) $(CFLAGS) -o $@ $(TEST_OBJS) -L./ -lcu
 test-segfault: test-segfault.c libcu.a
 	$(CC) $(CFLAGS) -o $@ $^ -L./ -lcu
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 check: test test-segfault
 	mkdir -p regressions
 	touch regressions/testSuiteName{,2}.{out,err}
+	touch regressions/testSuiteTest2.{out,err}
 	-./test
 	-cd regressions && ../check-regressions
 	@echo ""

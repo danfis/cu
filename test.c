@@ -2,6 +2,11 @@
 #include "cu.h"
 
 /**
+ * Test suite from imported from other file.
+ */
+#include "test2.h"
+
+/**
  * Definition of test function
  */
 TEST(testFunction)
@@ -46,6 +51,7 @@ TEST_SUITE(testSuiteName2)
 TEST_SUITES{
     TEST_SUITE_ADD(testSuiteName),
     TEST_SUITE_ADD(testSuiteName2),
+    TEST_SUITE_ADD(testSuiteTest2),
     TEST_SUITES_CLOSURE
 };
 
