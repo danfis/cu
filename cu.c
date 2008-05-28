@@ -146,6 +146,9 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
 
         MSG_END;
         close(fd);
+
+        /* stop process where running testsuite */
+        exit(0);
     }else{
         /* close write end of pipe */
         close(pipefd[1]);
