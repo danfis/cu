@@ -56,6 +56,7 @@ int test_failed;
 #define TEST_SUITE_FAILED '4'
 #define TEST_SUITE_SUCCEED '5'
 #define END '6'
+#define TEST_NAME '7'
 
 /* predefined messages */
 #define MSG_CHECK_SUCCEED write(fd, "1\n", 2)
@@ -67,6 +68,7 @@ int test_failed;
 
 /* length of buffers */
 #define BUF_LEN 1000
+#define MSGBUF_LEN 300
 
 
 static void redirect_out_err(const char *testName);
@@ -180,6 +182,8 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
 static void run_test_suite(const char *ts_name, cu_test_suite_t *ts)
 {
     int test_suite_failed = 0;
+    char buffer[MSGBUF_LEN];
+    int len;
 
     /* set up current test suite name for later messaging... */
     cu_current_test_suite = ts_name;
@@ -192,6 +196,11 @@ static void run_test_suite(const char *ts_name, cu_test_suite_t *ts)
 
         /* set up name of test for later messaging */
         cu_current_test = ts->name;
+
+        /* send message what test is currently running */
+        len = snprintf(buffer, MSGBUF_LEN, "%c    --> Running %s...\n",
+                       TEST_NAME, cu_current_test);
+        write(fd, buffer, len);
 
         /* run test */
         (*(ts->func))();
@@ -220,29 +229,41 @@ static void run_test_suite(const char *ts_name, cu_test_suite_t *ts)
 static void receive_messages(void)
 {
     char buf[BUF_LEN]; /* buffer */
-    int buf_read; /* how many chars stored in buf */
+    int buf_len; /* how many chars stored in buf */
+    char bufout[MSGBUF_LEN]; /* buffer which can be printed out */
+    int bufout_len;
     int state = 0; /* 0 - waiting for code, 1 - copy msg to stdout */
     int i;
     int end = 0; /* end of messages? */
 
-    while((buf_read = read(fd, buf, BUF_LEN)) > 0 && !end){
-        for (i=0; i < buf_read; i++){
+    bufout_len = 0;
+    while((buf_len = read(fd, buf, BUF_LEN)) > 0 && !end){
+        for (i=0; i < buf_len; i++){
 
-            /* copy msg to stderr */
-            if (state == 1){
-                fprintf(stdout, "%c", buf[i]);
-                fflush(stdout);
+            /* Prepare message for printing out */
+            if (state == 1 || state == 2){
+                if (bufout_len < MSGBUF_LEN)
+                    bufout[bufout_len++] = buf[i];
             }
 
-            /* reset on '\n' in msg */
+            /* reset state on '\n' in msg */
             if (buf[i] == '\n'){
+                /* copy messages out */
+                if (state == 1)
+                    write(1, bufout, bufout_len);
+                if (state == 2)
+                    write(2, bufout, bufout_len);
+
                 state = 0;
+                bufout_len = 0;
                 continue;
             }
 
             if (state == 0){
                 if (buf[i] == CHECK_FAILED){
                     cu_fail_checks++;
+                    state = 2;
+                }else if (buf[i] == TEST_NAME){
                     state = 1;
                 }else if (buf[i] == CHECK_SUCCEED){
                     cu_success_checks++;
@@ -270,10 +291,10 @@ void cu_success_assertation(void)
 
 void cu_fail_assertation(const char *file, int line, const char *msg)
 {
-    char buf[BUF_LEN];
+    char buf[MSGBUF_LEN];
     int len;
 
-    len = snprintf(buf, BUF_LEN, "%c%s:%d (%s::%s) :: %s\n",
+    len = snprintf(buf, MSGBUF_LEN, "%c%s:%d (%s::%s) :: %s\n",
             CHECK_FAILED,
             file, line, cu_current_test_suite, cu_current_test, msg);
     write(fd, buf, len);
