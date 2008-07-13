@@ -32,7 +32,7 @@ import re
 import sys
 import math
 
-EPS = 6
+EPS = 0.6
 DIR = "."
 MAX_DIFF_LINES = 20
 
@@ -42,8 +42,8 @@ class Hunk:
         self.deleted = []
         self.lines = []
 
-        self.re_is_num = re.compile("^.*[0-9].*$")
-        self.num_pattern = r"-?[0-9]*\.?[0-9]*[eE]?-?[0-9]*" # TODO: Improve this
+        self.re_is_num = re.compile("^.*(?:(?:[0-9]\.)|(?:\.[0-9])).*$")
+        self.num_pattern = r"-?(?:(?:[0-9]+\.[0-9]*)|(?:\.[0-9]+))(?:[eE]-?[0-9]+)?"
         self.re_num = re.compile(self.num_pattern)
 
     def numLines(self):
