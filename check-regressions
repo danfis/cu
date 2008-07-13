@@ -37,12 +37,17 @@ DIR = "."
 MAX_DIFF_LINES = 20
 
 class Hunk:
+    """ This class represents one hunk from diff. """
+
     def __init__(self):
         self.added = []
         self.deleted = []
         self.lines = []
 
+        # to identify lines with floating point numbers
         self.re_is_num = re.compile("^.*(?:(?:[0-9]\.)|(?:\.[0-9])).*$")
+
+        # pattern to match floating point number
         self.num_pattern = r"-?(?:(?:[0-9]+\.[0-9]*)|(?:\.[0-9]+))(?:[eE]-?[0-9]+)?"
         self.re_num = re.compile(self.num_pattern)
 
@@ -68,15 +73,24 @@ class Hunk:
         return self.deleted
 
     def __eq(self, num1, num2):
+        """ Returns True if num1 equals to num2 with respect to EPS
+            (defined above) """
         return math.fabs(num1 - num2) < EPS
 
     def checkFloats(self):
-        """ Returns True if it is ok to delete this hunk """
+        """ This method try to check if only difference between added and
+            deleted lines of this hunk is different precission of floating
+            point numbers
+        """
+
+        # If number of added and deleted lines differs, then there is more
+        # differences that precission of floating point numbers
         if self.numLinesAdded() != self.numLinesDeleted():
             return False
 
         for i in xrange(0, self.numLinesAdded()):
-            # if any line does not contain number - return False
+            # if any line does not contain number - return False because
+            # there must be more differences than in numbers
             if not self.re_is_num.match(self.added[i]) \
                or not self.re_is_num.match(self.deleted[i]):
                return False
@@ -84,12 +98,15 @@ class Hunk:
             line1 = self.added[i]
             line2 = self.deleted[i]
 
+            # Extract all floating point numbers from each line
             nums1 = self.re_num.findall(line1)
             nums2 = self.re_num.findall(line2)
+            # and remove all empty strings
             nums1 = filter(lambda x: len(x) > 0, nums1)
             nums2 = filter(lambda x: len(x) > 0, nums2)
 
-            # if length of list nums1 does not equal to length of nums2 return False
+            # if length of list nums1 does not equal to length of nums2
+            # return False
             if len(nums1) != len(nums2):
                 return False
 
@@ -105,10 +122,14 @@ class Hunk:
             if line1 != line2:
                 return False
 
+        # If it does not fail anywhere, added and deleted lines must be
+        # same
         return True
 
 
-class Hunks:
+class Diff:
+    """ Represents whole diff. """
+
     def __init__(self):
         self.hunks = []
         self.lines = 0
@@ -129,6 +150,7 @@ class Hunks:
         return len(self.hunks)
 
     def checkFloats(self):
+        """ Will call method checkFloats on each hunk """
         hks = self.hunks[:]
         self.hunks = []
         self.lines = 0
@@ -145,10 +167,12 @@ class Parser:
     def __init__(self, fin):
         self.fin = fin
         self.line = ""
-        self.hunks = Hunks()
+        self.diff = Diff()
         self.cur_hunk = None
 
+        # to recognize beginning of hunk:
         self.re_hunk = re.compile(r"^[0-9]*(,[0-9]*){0,1}[a-zA-Z]?[0-9]*(,[0-9]*){0,1}$")
+
         self.re_added = re.compile(r"^> (.*)$")
         self.re_deleted = re.compile(r"^< (.*)$")
 
@@ -163,7 +187,7 @@ class Parser:
             # beggining of hunk
             if self.re_hunk.match(self.line):
                 if self.cur_hunk is not None:
-                    self.hunks.addHunk(self.cur_hunk)
+                    self.diff.addHunk(self.cur_hunk)
                 self.cur_hunk = Hunk()
                 self.cur_hunk.addLine(self.line)
 
@@ -181,14 +205,14 @@ class Parser:
 
         # last push to list of hunks
         if self.cur_hunk is not None:
-            self.hunks.addHunk(self.cur_hunk)
+            self.diff.addHunk(self.cur_hunk)
         
-    def getHunks(self):
-        return self.hunks
+    def getDiff(self):
+        return self.diff
 
 
 def regressionFilesInDir(dir = "."):
-    """ Returns sorted list of pairs of filesnames where first name in pair
+    """ Returns sorted list of pairs of filenames where first name in pair
         is tmp. file and second corresponding file with saved regressions.
     """
 
@@ -248,7 +272,8 @@ def dumpLines(lines, prefix = "", wait = False, max_lines = -1):
             if max_lines >= 0 and line_num > max_lines:
                 break
 
-def checkRegressions(files):
+def main(files):
+    # As first compute length of columns
     len1 = 0
     len2 = 0
     for filenames in files:
@@ -269,27 +294,27 @@ def checkRegressions(files):
         inout = popen2(cmd)
         parser = Parser(inout[0])
         parser.parse()
-        hunks = parser.getHunks()
-        hunks.checkFloats()
+        diff = parser.getDiff()
+        diff.checkFloats()
 
-        if hunks.numHunks() == 0:
+        if diff.numHunks() == 0:
             MSGOK(" [", "OK", "]")
-            if hunks.numOmittedLines() > 0:
-                MSGINFO(" -->", str(hunks.numOmittedLines()) + " lines from diff omitted")
+            if diff.numOmittedLines() > 0:
+                MSGINFO(" -->", str(diff.numOmittedLines()) + " lines from diff omitted")
         else:
             MSGFAIL(" [", "FAILED", "]")
-            if hunks.numOmittedLines() > 0:
-                MSGINFO(" -->", str(hunks.numOmittedLines()) + " lines from diff omitted")
-            MSGINFO(" -->", "Diff has " + str(hunks.numLines()) + " lines")
+            if diff.numOmittedLines() > 0:
+                MSGINFO(" -->", str(diff.numOmittedLines()) + " lines from diff omitted")
+            MSGINFO(" -->", "Diff has " + str(diff.numLines()) + " lines")
 
-            if hunks.numLines() <= MAX_DIFF_LINES:
+            if diff.numLines() <= MAX_DIFF_LINES:
                 MSGINFO(" -->", "Diff:")
-                for h in hunks.getHunks():
+                for h in diff.getHunks():
                     dumpLines(h.getLines(), "   |", True)
             else:
                 MSGINFO(" -->", "Printing only first " + str(MAX_DIFF_LINES) + " lines:")
                 lines = []
-                for h in hunks.getHunks():
+                for h in diff.getHunks():
                     lines += h.getLines()
                     if len(lines) > MAX_DIFF_LINES:
                         break;
@@ -309,5 +334,5 @@ if len(sys.argv) > 1:
 
 os.chdir(DIR)
 files = regressionFilesInDir()
-checkRegressions(files)
+main(files)
 sys.exit(0)
