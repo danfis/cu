@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/python
 ##
 # CU - C unit testing framework
 # ---------------------------------
@@ -21,29 +21,293 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-DIR="$1"
-TMP="/tmp/$$.regression.test"
-RET=0
+##
+# Improved version of check-regression script which is able to detect and
+# omit differences in saved floating point numbers
+# 
 
-for file in $(ls tmp.*); do
-    file_orig=${file#tmp.}
+from popen2 import *
+import os
+import re
+import sys
+import math
 
-    if [ -f "$file_orig" ]; then
-        echo -ne "Comparing $file and $file_orig:"
-        diff $file_orig $file >$TMP 2>&1;
-        if [ $? -eq 0 ]; then
-            echo -ne " \033[0;32mOK\033[0;0m\n";
-        else
-            echo -ne " \033[0;31mFAILED\033[0;0m\n";
-            echo "diff $file_orig $file:"
-            cat $TMP;
-            RET=1
-        fi
-    else
-        echo "Can't compare $file $file_orig, bacause $file_orig does not exist!"
-        RET=1
-    fi
-done;
+EPS = 6
+DIR = "."
+MAX_DIFF_LINES = 20
 
-rm -f $TMP
-exit $RET
+class Hunk:
+    def __init__(self):
+        self.added = []
+        self.deleted = []
+        self.lines = []
+
+        self.re_is_num = re.compile("^.*[0-9].*$")
+        self.num_pattern = r"-?[0-9]*\.?[0-9]*[eE]?-?[0-9]*" # TODO: Improve this
+        self.re_num = re.compile(self.num_pattern)
+
+    def numLines(self):
+        return len(self.lines)
+    def numLinesAdded(self):
+        return len(self.added)
+    def numLinesDeleted(self):
+        return len(self.deleted)
+
+    def addLineAdded(self, line):
+        self.added.append(line)
+    def addLineDeleted(self, line):
+        self.deleted.append(line)
+    def addLine(self, line):
+        self.lines.append(line)
+
+    def getLines(self):
+        return self.lines
+    def getLinesAdded(self):
+        return self.added
+    def getLinesDeleted(self):
+        return self.deleted
+
+    def __eq(self, num1, num2):
+        return math.fabs(num1 - num2) < EPS
+
+    def checkFloats(self):
+        """ Returns True if it is ok to delete this hunk """
+        if self.numLinesAdded() != self.numLinesDeleted():
+            return False
+
+        for i in xrange(0, self.numLinesAdded()):
+            # if any line does not contain number - return False
+            if not self.re_is_num.match(self.added[i]) \
+               or not self.re_is_num.match(self.deleted[i]):
+               return False
+
+            line1 = self.added[i]
+            line2 = self.deleted[i]
+
+            nums1 = self.re_num.findall(line1)
+            nums2 = self.re_num.findall(line2)
+            nums1 = filter(lambda x: len(x) > 0, nums1)
+            nums2 = filter(lambda x: len(x) > 0, nums2)
+
+            # if length of list nums1 does not equal to length of nums2 return False
+            if len(nums1) != len(nums2):
+                return False
+
+            # iterate trough all numbers
+            for j in xrange(0, len(nums1)):
+                # if numbers do not equal to each other return False
+                if not self.__eq(float(nums1[j]), float(nums2[j])):
+                    return False
+
+            # compare the rest of lines
+            line1 = self.re_num.sub("", line1)
+            line2 = self.re_num.sub("", line2)
+            if line1 != line2:
+                return False
+
+        return True
+
+
+class Hunks:
+    def __init__(self):
+        self.hunks = []
+        self.lines = 0
+        self.omitted_lines = 0
+
+    def addHunk(self, hunk):
+        self.hunks.append(hunk)
+        self.lines += hunk.numLines()
+
+    def numLines(self):
+        return self.lines
+    def numOmittedLines(self):
+        return self.omitted_lines
+
+    def getHunks(self):
+        return self.hunks
+    def numHunks(self):
+        return len(self.hunks)
+
+    def checkFloats(self):
+        hks = self.hunks[:]
+        self.hunks = []
+        self.lines = 0
+        for h in hks:
+            if not h.checkFloats():
+                self.hunks.append(h)
+                self.lines += h.numLines()
+            else:
+                self.omitted_lines += h.numLines()
+            
+
+
+class Parser:
+    def __init__(self, fin):
+        self.fin = fin
+        self.line = ""
+        self.hunks = Hunks()
+        self.cur_hunk = None
+
+        self.re_hunk = re.compile(r"^[0-9]*(,[0-9]*){0,1}[a-zA-Z]?[0-9]*(,[0-9]*){0,1}$")
+        self.re_added = re.compile(r"^> (.*)$")
+        self.re_deleted = re.compile(r"^< (.*)$")
+
+    def __readNextLine(self):
+        self.line = self.fin.readline()
+        if len(self.line) == 0:
+            return False
+        return True
+
+    def parse(self):
+        while self.__readNextLine():
+            # beggining of hunk
+            if self.re_hunk.match(self.line):
+                if self.cur_hunk is not None:
+                    self.hunks.addHunk(self.cur_hunk)
+                self.cur_hunk = Hunk()
+                self.cur_hunk.addLine(self.line)
+
+            # line added
+            match = self.re_added.match(self.line)
+            if match is not None:
+                self.cur_hunk.addLine(self.line)
+                self.cur_hunk.addLineAdded(match.group(1))
+
+            # line deleted
+            match = self.re_deleted.match(self.line)
+            if match is not None:
+                self.cur_hunk.addLine(self.line)
+                self.cur_hunk.addLineDeleted(match.group(1))
+
+        # last push to list of hunks
+        if self.cur_hunk is not None:
+            self.hunks.addHunk(self.cur_hunk)
+        
+    def getHunks(self):
+        return self.hunks
+
+
+def regressionFilesInDir(dir = "."):
+    """ Returns sorted list of pairs of filesnames where first name in pair
+        is tmp. file and second corresponding file with saved regressions.
+    """
+
+    re_tmp_out_file = re.compile(r"tmp\.(.*\.out)")
+    re_tmp_err_file = re.compile(r"tmp\.(.*\.err)")
+    files = []
+
+    all_files = os.listdir(dir)
+    all_files.sort()
+    for file in all_files:
+        res = re_tmp_out_file.match(file)
+        if res is not None:
+            fname = res.group(1)
+            tmp = [file, ""]
+            for file2 in all_files:
+                if file2 == fname:
+                    tmp = [file, file2,]
+                    break
+            files.append(tmp)
+
+        res = re_tmp_err_file.match(file)
+        if res is not None:
+            fname = res.group(1)
+            tmp = [file, ""]
+            for file2 in all_files:
+                if file2 == fname:
+                    tmp = [file, file2,]
+                    break
+            files.append(tmp)
+
+    return files
+
+
+def MSG(str = "", wait = False):
+    if wait:
+        print str,
+    else:
+        print str
+def MSGOK(prestr = "", str = "", poststr = ""):
+    print prestr, "\033[0;32m" + str + "\033[0;0m", poststr
+def MSGFAIL(prestr = "", str = "", poststr = ""):
+    print prestr, "\033[0;31m" + str + "\033[0;0m", poststr
+def MSGINFO(prestr = "", str = "", poststr = ""):
+    print prestr, "\033[0;33m" + str + "\033[0;0m", poststr
+def dumpLines(lines, prefix = "", wait = False, max_lines = -1):
+    line_num = 0
+    if wait:
+        for line in lines:
+            print prefix, line,
+            line_num += 1
+            if max_lines >= 0 and line_num > max_lines:
+                break
+    else:
+        for line in lines:
+            print prefix, line
+            line_num += 1
+            if max_lines >= 0 and line_num > max_lines:
+                break
+
+def checkRegressions(files):
+    len1 = 0
+    len2 = 0
+    for filenames in files:
+        if len(filenames[0]) > len1:
+            len1 = len(filenames[0])
+        if len(filenames[1]) > len2:
+            len2 = len(filenames[1])
+
+    for filenames in files:
+        if len(filenames[1]) == 0:
+            MSGFAIL("", "===", "Can't compare %s %s, bacause %s does not exist!" % \
+                    (filenames[0], filenames[0][4:], filenames[0][4:]))
+            continue
+
+        cmd = "diff " + filenames[0] + " " + filenames[1]
+        MSG("Comparing %s and %s" % \
+                (filenames[0].ljust(len1) ,filenames[1].ljust(len2)), True)
+        inout = popen2(cmd)
+        parser = Parser(inout[0])
+        parser.parse()
+        hunks = parser.getHunks()
+        hunks.checkFloats()
+
+        if hunks.numHunks() == 0:
+            MSGOK(" [", "OK", "]")
+            if hunks.numOmittedLines() > 0:
+                MSGINFO(" -->", str(hunks.numOmittedLines()) + " lines from diff omitted")
+        else:
+            MSGFAIL(" [", "FAILED", "]")
+            if hunks.numOmittedLines() > 0:
+                MSGINFO(" -->", str(hunks.numOmittedLines()) + " lines from diff omitted")
+            MSGINFO(" -->", "Diff has " + str(hunks.numLines()) + " lines")
+
+            if hunks.numLines() <= MAX_DIFF_LINES:
+                MSGINFO(" -->", "Diff:")
+                for h in hunks.getHunks():
+                    dumpLines(h.getLines(), "   |", True)
+            else:
+                MSGINFO(" -->", "Printing only first " + str(MAX_DIFF_LINES) + " lines:")
+                lines = []
+                for h in hunks.getHunks():
+                    lines += h.getLines()
+                    if len(lines) > MAX_DIFF_LINES:
+                        break;
+                dumpLines(lines, "   |", True, MAX_DIFF_LINES)
+                    
+def usage():
+    print "Usage: " + sys.argv[0] + " [ directory ]"
+    print ""
+    print " Improved version of check-regression script which is able to detect and"
+    print " omit differences in saved floating point numbers"
+    sys.exit(-1)
+
+if len(sys.argv) > 1 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
+    usage()
+if len(sys.argv) > 1:
+    DIR = sys.argv[1]
+
+os.chdir(DIR)
+files = regressionFilesInDir()
+checkRegressions(files)
+sys.exit(0)
