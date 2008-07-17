@@ -45,10 +45,10 @@ class Hunk:
         self.lines = []
 
         # to identify lines with floating point numbers
-        self.re_is_num = re.compile("^.*(?:(?:[0-9]\.)|(?:\.[0-9])).*$")
+        self.re_is_num = re.compile("^.*[0-9].*$")
 
         # pattern to match floating point number
-        self.num_pattern = r"-?(?:(?:[0-9]+\.[0-9]*)|(?:\.[0-9]+))(?:[eE]-?[0-9]+)?"
+        self.num_pattern = r"-?(?:(?:[0-9]+(?:\.[0-9]*)?)|(?:\.[0-9]+))(?:[eE]-?[0-9]+)?"
         self.re_num = re.compile(self.num_pattern)
 
     def numLines(self):
