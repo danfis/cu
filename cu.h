@@ -1,7 +1,7 @@
 /***
  * CU - C unit testing framework
  * ---------------------------------
- * Copyright (c)2007 Daniel Fiser <danfis@danfis.cz>
+ * Copyright (c)2007,2008 Daniel Fiser <danfis@danfis.cz>
  *
  *
  *  This file is part of CU.
