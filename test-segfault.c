@@ -6,7 +6,10 @@
  */
 TEST(testFunction)
 {
-    int *a = 0;
+    int *a;
+
+    assertTrue(0);
+    assertFalse(0);
     *a = 10;
     assertTrue(0);
 }

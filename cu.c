@@ -169,6 +169,10 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
             }else{
                 fprintf(stdout, "Test suite terminated abnormaly!\n");
             }
+
+            /* mark this test suite as failed, because was terminated
+             * prematurely */
+            cu_fail_test_suites++;
         }
 
         close(fd);
