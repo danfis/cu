@@ -21,7 +21,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from popen2 import *
+from subprocess import Popen, PIPE
 import os
 import re
 import sys
@@ -304,15 +304,15 @@ def main(files):
                     (filenames[0], filenames[0][4:], filenames[0][4:]))
             continue
 
-        cmd = "diff " + filenames[0] + " " + filenames[1]
+        cmd = ["diff", filenames[0], filenames[1]]
         MSG_BASE = "Comparing %s and %s" % \
                 (filenames[0].ljust(len1) ,filenames[1].ljust(len2))
         if not PROGRESS_ON:
             print MSG_BASE, 
             sys.stdout.flush()
 
-        inout = popen2(cmd)
-        parser = Parser(inout[0])
+        pipe = Popen(cmd, stdout=PIPE)
+        parser = Parser(pipe.stdout)
         parser.parse()
         diff = parser.getDiff()
         if not EXACT:
