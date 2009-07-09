@@ -23,10 +23,6 @@
 #ifndef _CU_H_
 #define _CU_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /***** PUBLIC API *****/
 /**
  * Define test
@@ -112,9 +108,6 @@ typedef struct _cu_test_suites_t {
     cu_test_suite_t *test_suite;
 } cu_test_suites_t;
 
-/**
- * This must be define in users source code.
- */
 extern cu_test_suites_t cu_test_suites[];
 
 extern const char *cu_current_test;
@@ -134,9 +127,5 @@ void cu_run(int argc, char *argv[]);
 void cu_success_assertation(void);
 void cu_fail_assertation(const char *file, int line, const char *msg);
 void cu_set_out_prefix(const char *str);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 #endif
