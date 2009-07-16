@@ -2,6 +2,7 @@
 
 import re
 import os
+import sys
 
 regression_dir = 'regressions/'
 main_c = 'main.c'
@@ -164,8 +165,16 @@ class Regression(object):
     def do(self):
         os.system('touch %s/TS%s.{out,err}' % (regression_dir, tsname))
 
+def usage():
+    print 'Usage: {0} tsname'.format(sys.argv[0])
+    print ''
+    sys.exit(-1)
+
 if __name__ == '__main__':
-    tsname = 'test'
+    if len(sys.argv) != 2:
+        usage()
+    tsname = sys.argv[1]
+
     if tsname is not None:
         mainc = MainC(main_c)
         hc = HC()
