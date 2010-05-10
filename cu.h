@@ -23,6 +23,10 @@
 #ifndef _CU_H_
 #define _CU_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /***** PUBLIC API *****/
 /**
  * Define test
@@ -127,5 +131,9 @@ void cu_run(int argc, char *argv[]);
 void cu_success_assertation(void);
 void cu_fail_assertation(const char *file, int line, const char *msg);
 void cu_set_out_prefix(const char *str);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
