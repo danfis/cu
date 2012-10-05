@@ -29,8 +29,13 @@ extern "C" {
 /**
  * Define test
  */
-#define TEST(name) \
+#ifdef __cplusplus
+# define TEST(name) \
+    extern "C" void name(void)
+#else /* __cplusplus */
+# define TEST(name) \
     void name(void)
+#endif /* __cplusplus */
 
 /**
  * Define testsuite
