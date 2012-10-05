@@ -2,6 +2,10 @@
 CC ?= gcc
 PYTHON ?= python
 
+PREFIX     ?= /usr/local
+INCLUDEDIR ?= include
+LIBDIR     ?= lib
+
 CFLAGS = -g -Wall -pedantic
 
 ENABLE_TIMER ?= no
@@ -44,6 +48,17 @@ check: test test-segfault
 	@echo "======= SEGFAULT: ========="
 	@echo ""
 	-./test-segfault
+
+install: libcu.a
+	mkdir -p $(PREFIX)/$(INCLUDEDIR)
+	mkdir -p $(PREFIX)/$(LIBDIR)
+	cp cu.h $(PREFIX)/$(INCLUDEDIR)
+	cp libcu.a $(PREFIX)/$(LIBDIR)
+
+deb:
+	$(PYTHON) debian/make-changelog.py <CHANGELOG >debian/changelog
+	cp BSD-LICENSE debian/copyright
+	debuild -us -uc
 
 clean:
 	rm -f *.o
