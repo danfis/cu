@@ -1,3 +1,4 @@
-cu v0.13-rc, Daniel Fiser <danfis@danfis.cz>, 2012-10-05
+cu v0.13, Daniel Fiser <danfis@danfis.cz>, 2012-10-05
 
   * License changed from LGPL to 3-clause BSD.
+  * Added support for building Debian pacakge.
