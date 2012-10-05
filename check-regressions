@@ -2,7 +2,7 @@
 ##
 # CU - C unit testing framework
 # ---------------------------------
-# Copyright (c)2007,2008 Daniel Fiser <danfis@danfis.cz>
+# Copyright (c)2007,2008,2012 Daniel Fiser <danfis@danfis.cz>
 #
 #
 #  This file is part of CU.
@@ -28,7 +28,7 @@ import sys
 import math
 from getopt import gnu_getopt, GetoptError
 
-EPS = 0.6
+EPS = 6E-4
 BASE_DIR = "."
 MAX_DIFF_LINES = 20
 EXACT = False

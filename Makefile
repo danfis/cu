@@ -1,4 +1,7 @@
+
 CC ?= gcc
+PYTHON ?= python
+
 CFLAGS = -g -Wall -pedantic
 
 ENABLE_TIMER ?= no
@@ -16,6 +19,7 @@ all: $(TARGETS)
 libcu.a: cu.o
 	ar cr $@ $^
 	ranlib $@
+
 cu.o: cu.c cu.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -24,15 +28,18 @@ test: $(TEST_OBJS) libcu.a
 test-segfault: test-segfault.c libcu.a
 	$(CC) $(CFLAGS) -o $@ $^ -L./ -lcu
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
 check: test test-segfault
 	mkdir -p regressions
-	touch regressions/testSuiteName{,2}.{out,err}
-	touch regressions/testSuiteTest2.{out,err}
+	touch regressions/testSuiteName.out
+	touch regressions/testSuiteName.err
+	touch regressions/testSuiteName2.out
+	touch regressions/testSuiteName2.err
+	touch regressions/testSuiteSegfault.out
+	touch regressions/testSuiteSegfault.err
+	touch regressions/testSuiteTest2.out
+	touch regressions/testSuiteTest2.err
 	-./test
-	-cd regressions && ../check-regressions
+	-cd regressions && $(PYTHON) ../check-regressions
 	@echo ""
 	@echo "======= SEGFAULT: ========="
 	@echo ""
