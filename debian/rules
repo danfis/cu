@@ -4,4 +4,4 @@
 	dh $@
 
 override_dh_auto_install:
-	$(MAKE) PREFIX=$$(pwd)/debian/cu/usr install
+	$(MAKE) PREFIX=$$(pwd)/debian/cunittest/usr install
