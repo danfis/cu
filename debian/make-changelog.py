@@ -26,7 +26,7 @@ class Section(object):
         print(self._formatFooter())
 
     def _formatHeader(self):
-        h = 'cu (' + self.version + ') UNRELEASED; urgency=low'
+        h = 'cunittest (' + self.version + ') UNRELEASED; urgency=low'
         return h
     def _formatFooter(self):
         env = { 'LANG' : 'en_US.UTF-8' }

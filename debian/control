@@ -1,11 +1,11 @@
-Source: cu
+Source: cunittest
 Maintainer: Daniel Fiser <danfis@danfis.cz>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.2
 Build-Depends: debhelper (>= 7)
 
-Package: cu
+Package: cunittest
 Architecture: any
 Depends: ${misc:Depends}, python
 Description: A simple unit testing framework for handling automated tests in C.
