@@ -5,6 +5,7 @@ PYTHON ?= python
 PREFIX     ?= /usr/local
 INCLUDEDIR ?= include
 LIBDIR     ?= lib
+BINDIR     ?= bin
 
 CFLAGS = -g -Wall -pedantic
 
@@ -43,7 +44,7 @@ check: test test-segfault
 	touch regressions/testSuiteTest2.out
 	touch regressions/testSuiteTest2.err
 	-./test
-	-cd regressions && $(PYTHON) ../check-regressions
+	-cd regressions && $(PYTHON) ../cu-check-regressions
 	@echo ""
 	@echo "======= SEGFAULT: ========="
 	@echo ""
@@ -52,8 +53,10 @@ check: test test-segfault
 install: libcu.a
 	mkdir -p $(PREFIX)/$(INCLUDEDIR)
 	mkdir -p $(PREFIX)/$(LIBDIR)
-	cp cu.h $(PREFIX)/$(INCLUDEDIR)
-	cp libcu.a $(PREFIX)/$(LIBDIR)
+	mkdir -p $(PREFIX)/$(BINDIR)
+	cp cu.h $(PREFIX)/$(INCLUDEDIR)/
+	cp libcu.a $(PREFIX)/$(LIBDIR)/
+	cp cu-check-regressions $(PREFIX)/$(BINDIR)/
 
 deb:
 	$(PYTHON) debian/make-changelog.py <CHANGELOG >debian/changelog
