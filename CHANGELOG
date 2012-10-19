@@ -1,3 +1,7 @@
+cu v0.14.1, Daniel Fiser <danfis@danfis.cz>, 2012-10-19
+
+  * Debian package renamed to cunittest
+
 cu v0.14, Daniel Fiser <danfis@danfis.cz>, 2012-10-19
 
   * check-regressions renamed to cu-check-regressions
