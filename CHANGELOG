@@ -1,3 +1,9 @@
+cu v0.14, Daniel Fiser <danfis@danfis.cz>, 2012-10-19
+
+  * check-regressions renamed to cu-check-regressions
+  * cu-check-regressions made compatible to both versions of python (2 and 3)
+  * cu-check-regressions included into debian package
+
 cu v0.13, Daniel Fiser <danfis@danfis.cz>, 2012-10-05
 
   * License changed from LGPL to 3-clause BSD.
