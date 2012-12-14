@@ -1,3 +1,7 @@
+cu v0.14.2, Daniel Fiser <danfis@danfis.cz>, 2012-12-14
+
+  * Fixed encoding of the output of cu-check-regressions script.
+
 cu v0.14.1, Daniel Fiser <danfis@danfis.cz>, 2012-10-19
 
   * Debian package renamed to cunittest
