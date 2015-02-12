@@ -67,33 +67,35 @@ int test_failed;
 
 static void redirect_out_err(const char *testName);
 static void close_out_err(void);
-static void run_test_suite(const char *ts_name, cu_test_suite_t *ts);
+static int run_test(const char *t_name, cu_test_func_t t_func);
+static void run_test_suite(const char *ts_name, cu_test_suite_t *ts,
+                           int test_id);
 static void receive_messages(void);
 
-static void cu_run_fork(const char *ts_name, cu_test_suite_t *test_suite);
+static int cu_run_test_suite(const char *test_suite_name,
+                             const char *test_name);
+static void cu_run_fork(const char *ts_name, cu_test_suite_t *test_suite,
+                        int test_id);
 static void cu_print_results(void);
 
 void cu_run(int argc, char *argv[])
 {
     cu_test_suites_t *tss;
+    char *test_suite_name, *test_name;
     int i;
     char found = 0;
 
     if (argc > 1){
         for (i=1; i < argc; i++){
-            tss = cu_test_suites;
-            while (tss->name != NULL && tss->test_suite != NULL){
-                if (strcmp(argv[i], tss->name) == 0){
-                    found = 1;
-                    cu_run_fork(tss->name, tss->test_suite);
-                    break;
-                }
-                tss++;
+            test_suite_name = argv[i];
+            test_name = test_suite_name;
+            for (;*test_name && *test_name != ':'; ++test_name);
+            if (*test_name != 0x0){
+                *test_name = 0x0;
+                ++test_name;
             }
 
-            if (tss->name == NULL || tss->test_suite == NULL){
-                fprintf(stderr, "ERROR: Could not find test suite '%s'\n", argv[i]);
-            }
+            found |= cu_run_test_suite(test_suite_name, test_name);
         }
 
         if (found == 1)
@@ -102,7 +104,7 @@ void cu_run(int argc, char *argv[])
     }else{
         tss = cu_test_suites;
         while (tss->name != NULL && tss->test_suite != NULL){
-            cu_run_fork(tss->name, tss->test_suite);
+            cu_run_fork(tss->name, tss->test_suite, -1);
             tss++;
         }
         cu_print_results();
@@ -111,7 +113,53 @@ void cu_run(int argc, char *argv[])
 
 }
 
-static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
+static int cu_run_test_suite(const char *test_suite_name,
+                             const char *test_name)
+{
+    cu_test_suites_t *tss;
+    cu_test_suite_t *ts;
+    int found = 0;
+    int i;
+
+    tss = cu_test_suites;
+    while (tss->name != NULL && tss->test_suite != NULL){
+        if (strcmp(test_suite_name, tss->name) == 0){
+            if (test_name != NULL){
+                for (i = 0, ts = tss->test_suite;
+                        ts->name != NULL && ts->func != NULL; ++i, ++ts){
+                    if (strcmp(ts->name, test_name) == 0){
+                        break;
+                    }
+                }
+
+                if (ts->name != NULL && ts->func != NULL){
+                    found = 1;
+                    cu_run_fork(tss->name, tss->test_suite, i);
+                }
+            }else{
+                found = 1;
+                cu_run_fork(tss->name, tss->test_suite, -1);
+            }
+            break;
+        }
+        tss++;
+    }
+
+    if (!found){
+        if (test_name != NULL){
+            fprintf(stderr, "ERROR: Could not find test suite '%s:%s'\n",
+                    test_suite_name, test_name);
+        }else{
+            fprintf(stderr, "ERROR: Could not find test suite '%s'\n",
+                    test_suite_name);
+        }
+    }
+
+    return found;
+}
+
+static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts,
+                        int test_id)
 {
     int pipefd[2];
     int pid;
@@ -138,7 +186,7 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
         fd = pipefd[1];
 
         /* run testsuite, messages go to fd */
-        run_test_suite(ts_name, ts);
+        run_test_suite(ts_name, ts, test_id);
 
         MSG_END;
         close(fd);
@@ -177,11 +225,39 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts)
 
 }
 
-static void run_test_suite(const char *ts_name, cu_test_suite_t *ts)
+static int run_test(const char *t_name, cu_test_func_t t_func)
 {
     int test_suite_failed = 0;
     char buffer[MSGBUF_LEN];
     int len;
+
+    test_failed = 0;
+
+    /* set up name of test for later messaging */
+    cu_current_test = t_name;
+
+    /* send message what test is currently running */
+    len = snprintf(buffer, MSGBUF_LEN, "%c    --> Running %s...\n",
+                   TEST_NAME, cu_current_test);
+    write(fd, buffer, len);
+
+    /* run test */
+    (*(t_func))();
+
+    if (test_failed){
+        MSG_TEST_FAILED;
+        test_suite_failed = 1;
+    }else{
+        MSG_TEST_SUCCEED;
+    }
+
+    return test_suite_failed;
+}
+
+static void run_test_suite(const char *ts_name, cu_test_suite_t *ts,
+                           int test_id)
+{
+    int test_suite_failed = 0;
 
     /* set up current test suite name for later messaging... */
     cu_current_test_suite = ts_name;
@@ -189,28 +265,14 @@ static void run_test_suite(const char *ts_name, cu_test_suite_t *ts)
     /* redirect stdout and stderr */
     redirect_out_err(cu_current_test_suite);
 
-    while (ts->name != NULL && ts->func != NULL){
-        test_failed = 0;
-
-        /* set up name of test for later messaging */
-        cu_current_test = ts->name;
-
-        /* send message what test is currently running */
-        len = snprintf(buffer, MSGBUF_LEN, "%c    --> Running %s...\n",
-                       TEST_NAME, cu_current_test);
-        write(fd, buffer, len);
-
-        /* run test */
-        (*(ts->func))();
-
-        if (test_failed){
-            MSG_TEST_FAILED;
-            test_suite_failed = 1;
-        }else{
-            MSG_TEST_SUCCEED;
-        }
-
+    while (test_id == -1 && ts->name != NULL && ts->func != NULL){
+        test_suite_failed |= run_test(ts->name, ts->func);
         ts++; /* next test in test suite */
+    }
+
+    if (test_id != -1){
+        ts += test_id;
+        test_suite_failed |= run_test(ts->name, ts->func);
     }
 
     if (test_suite_failed){
