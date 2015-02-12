@@ -93,6 +93,8 @@ void cu_run(int argc, char *argv[])
             if (*test_name != 0x0){
                 *test_name = 0x0;
                 ++test_name;
+            }else{
+                test_name = NULL;
             }
 
             found |= cu_run_test_suite(test_suite_name, test_name);
