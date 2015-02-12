@@ -31,7 +31,7 @@ PROGRESS_ON = True
 MSG_BASE = ""
 
 def pr(s, flush = False):
-    sys.stdout.write(s.encode('utf-8'))
+    sys.stdout.write(s)
     if flush:
         sys.stdout.flush()
 
