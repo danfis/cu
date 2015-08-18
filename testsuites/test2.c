@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "cu.h"
+#include "../cu.h"
 
 TEST(testTest2Function)
 {
