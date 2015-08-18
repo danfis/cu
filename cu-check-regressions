@@ -239,6 +239,9 @@ def regressionFilesInDir():
     all_files.sort()
     for file in all_files:
         res = re_tmp_out_file.match(file)
+        if res is None:
+            res = re_tmp_err_file.match(file)
+
         if res is not None:
             fname = res.group(1)
             tmp = [file, ""]
@@ -248,17 +251,12 @@ def regressionFilesInDir():
                     break
             files.append(tmp)
 
-        res = re_tmp_err_file.match(file)
-        if res is not None:
-            fname = res.group(1)
-            tmp = [file, ""]
-            for file2 in all_files:
-                if file2 == fname:
-                    tmp = [file, file2,]
-                    break
-            files.append(tmp)
+    out = []
+    for f1, f2 in files:
+        if len(f2) > 0 or os.stat(f1).st_size > 0:
+            out.append([f1, f2])
 
-    return files
+    return out
 
 
 def MSG(s = "", wait = False):
