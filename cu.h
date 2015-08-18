@@ -1,7 +1,7 @@
 /***
  * CU - C unit testing framework
  * ---------------------------------
- * Copyright (c)2007,2008,2009,2012 Daniel Fiser <danfis@danfis.cz>
+ * Copyright (c)2007-2015 Daniel Fiser <danfis@danfis.cz>
  *
  *  This file is part of CU.
  *
@@ -65,21 +65,21 @@ extern "C" {
     cu_run(argc, argv)
 
 /**
- * Set prefix for files printed out. Must contain trailing /.
+ * Set prefix for output files. Must contain trailing /.
  */
 #define CU_SET_OUT_PREFIX(str) \
     cu_set_out_prefix(str)
 
 /**
- * Assertations
- * Assertations with suffix 'M' (e.g. assertTrueM) is variation of macro
+ * Assertions
+ * Assertions with suffix 'M' (e.g. assertTrueM) is variation of macro
  * where is possible to specify error message.
  */
 #define assertTrueM(a, message) \
     if (a){ \
-        cu_success_assertation(); \
+        cu_success_assertion(); \
     }else{ \
-        cu_fail_assertation(__FILE__, __LINE__, message); \
+        cu_fail_assertion(__FILE__, __LINE__, message); \
     }
 #define assertTrue(a) \
     assertTrueM((a), #a " is not true")
@@ -117,27 +117,13 @@ typedef struct _cu_test_suites_t {
 
 extern cu_test_suites_t cu_test_suites[];
 
-extern const char *cu_current_test;
-extern const char *cu_current_test_suite;
-
-extern int cu_success_test_suites;
-extern int cu_fail_test_suites;
-extern int cu_success_tests;
-extern int cu_fail_tests;
-extern int cu_success_checks;
-extern int cu_fail_checks;
-
-#define CU_OUT_PREFIX_LENGTH 30
-extern char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1];
-
 void cu_run(int argc, char *argv[]);
-void cu_success_assertation(void);
-void cu_fail_assertation(const char *file, int line, const char *msg);
+void cu_success_assertion(void);
+void cu_fail_assertion(const char *file, int line, const char *msg);
 void cu_set_out_prefix(const char *str);
 
 /** Timer **/
 #ifdef CU_ENABLE_TIMER
-extern struct timespec __cu_timer;
 
 /**
  * Returns value of timer. (as timespec struct)

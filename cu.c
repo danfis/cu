@@ -24,16 +24,17 @@
 /** Declared here, because I didn't find header file where it is declared */
 char *strsignal(int sig);
 
-const char *cu_current_test;
-const char *cu_current_test_suite;
-int cu_success_test_suites = 0;
-int cu_fail_test_suites = 0;
-int cu_success_tests = 0;
-int cu_fail_tests = 0;
-int cu_success_checks = 0;
-int cu_fail_checks = 0;
+static const char *cu_current_test;
+static const char *cu_current_test_suite;
+static int cu_success_test_suites = 0;
+static int cu_fail_test_suites = 0;
+static int cu_success_tests = 0;
+static int cu_fail_tests = 0;
+static int cu_success_checks = 0;
+static int cu_fail_checks = 0;
 
-char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1] = "";
+#define CU_OUT_PREFIX_LENGTH 128
+static char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1] = "";
 
 
 /* globally used file descriptor for reading/writing messages */
@@ -346,12 +347,12 @@ static void receive_messages(void)
     }
 }
 
-void cu_success_assertation(void)
+void cu_success_assertion(void)
 {
     MSG_CHECK_SUCCEED;
 }
 
-void cu_fail_assertation(const char *file, int line, const char *msg)
+void cu_fail_assertion(const char *file, int line, const char *msg)
 {
     char buf[MSGBUF_LEN];
     int len;
@@ -371,7 +372,7 @@ static void cu_print_results(void)
     fprintf(stdout, "==================================================\n");
     fprintf(stdout, "|               |  failed  |  succeed  |  total  |\n");
     fprintf(stdout, "|------------------------------------------------|\n");
-    fprintf(stdout, "| assertations: |  %6d  |  %7d  |  %5d  |\n",
+    fprintf(stdout, "| assertions:   |  %6d  |  %7d  |  %5d  |\n",
                 cu_fail_checks, cu_success_checks,
                 cu_success_checks+cu_fail_checks);
     fprintf(stdout, "| tests:        |  %6d  |  %7d  |  %5d  |\n",
@@ -414,7 +415,7 @@ static void close_out_err(void)
 
 #ifdef CU_ENABLE_TIMER
 /* global variables for timer functions */
-struct timespec __cu_timer;
+static struct timespec __cu_timer;
 static struct timespec __cu_timer_start, __cu_timer_stop;
 
 const struct timespec *cuTimer(void)
