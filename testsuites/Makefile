@@ -9,8 +9,10 @@ all: test test-segfault
 	touch regressions/testSuiteName.err
 	touch regressions/testSuiteName2.out
 	touch regressions/testSuiteName2.err
-	touch regressions/testSuiteSegfault.out
-	touch regressions/testSuiteSegfault.err
+	touch regressions/testSuiteSegfault.testFunction.out
+	touch regressions/testSuiteSegfault.testFunction.err
+	touch regressions/testSuiteSegfault.testPrint.out
+	touch regressions/testSuiteSegfault.testPrint.err
 	touch regressions/testSuiteTest2.out
 	touch regressions/testSuiteTest2.err
 	-./test
@@ -19,6 +21,7 @@ all: test test-segfault
 	@echo "======= SEGFAULT: ========="
 	@echo ""
 	-./test-segfault
+	-cd regressions && $(PYTHON) ../../cu-check-regressions
 
 test: $(TEST_OBJS)
 	$(CC) $(CFLAGS) -o $@ $(TEST_OBJS) -L../ -lcu

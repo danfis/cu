@@ -35,6 +35,7 @@ static int cu_fail_checks = 0;
 
 #define CU_OUT_PREFIX_LENGTH 128
 static char cu_out_prefix[CU_OUT_PREFIX_LENGTH+1] = "";
+static int cu_out_per_test = 0;
 
 
 /* globally used file descriptor for reading/writing messages */
@@ -68,6 +69,7 @@ static int test_failed;
 
 static void redirect_out_err(const char *testName);
 static void close_out_err(void);
+static void redirect_test_out_err(const char *test_suite, const char *test);
 static int run_test(const char *t_name, cu_test_func_t t_func);
 static void run_test_suite(const char *ts_name, cu_test_suite_t *ts,
                            int test_id);
@@ -234,6 +236,9 @@ static int run_test(const char *t_name, cu_test_func_t t_func)
     char buffer[MSGBUF_LEN];
     int len;
 
+    if (cu_out_per_test)
+        redirect_test_out_err(cu_current_test_suite, t_name);
+
     test_failed = 0;
 
     /* set up name of test for later messaging */
@@ -266,7 +271,8 @@ static void run_test_suite(const char *ts_name, cu_test_suite_t *ts,
     cu_current_test_suite = ts_name;
 
     /* redirect stdout and stderr */
-    redirect_out_err(cu_current_test_suite);
+    if (!cu_out_per_test)
+        redirect_out_err(cu_current_test_suite);
 
     while (test_id == -1 && ts->name != NULL && ts->func != NULL){
         test_suite_failed |= run_test(ts->name, ts->func);
@@ -389,17 +395,35 @@ void cu_set_out_prefix(const char *str)
     strncpy(cu_out_prefix, str, CU_OUT_PREFIX_LENGTH);
 }
 
+void cu_set_out_per_test(int yes)
+{
+    cu_out_per_test = yes;
+}
+
 static void redirect_out_err(const char *test_name)
 {
-    char buf[100];
+    redirect_test_out_err(test_name, NULL);
+}
 
-    snprintf(buf, 99, "%stmp.%s.out", cu_out_prefix, test_name);
+static void redirect_test_out_err(const char *test_suite, const char *test)
+{
+    char buf[256];
+
+    if (test != NULL){
+        snprintf(buf, 255, "%stmp.%s.%s.out", cu_out_prefix, test_suite, test);
+    }else{
+        snprintf(buf, 255, "%stmp.%s.out", cu_out_prefix, test_suite);
+    }
     if (freopen(buf, "w", stdout) == NULL){
         perror("Redirecting of stdout failed");
         exit(-1);
     }
 
-    snprintf(buf, 99, "%stmp.%s.err", cu_out_prefix, test_name);
+    if (test != NULL){
+        snprintf(buf, 255, "%stmp.%s.%s.err", cu_out_prefix, test_suite, test);
+    }else{
+        snprintf(buf, 255, "%stmp.%s.err", cu_out_prefix, test_suite);
+    }
     if (freopen(buf, "w", stderr) == NULL){
         perror("Redirecting of stderr failed");
         exit(-1);

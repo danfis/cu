@@ -71,6 +71,12 @@ extern "C" {
     cu_set_out_prefix(str)
 
 /**
+ * Enables (disables) output per test instead of a whole testsuite.
+ */
+#define CU_SET_OUT_PER_TEST(yes) \
+    cu_set_out_per_test(yes)
+
+/**
  * Assertions
  * Assertions with suffix 'M' (e.g. assertTrueM) is variation of macro
  * where is possible to specify error message.
@@ -121,6 +127,7 @@ void cu_run(int argc, char *argv[]);
 void cu_success_assertion(void);
 void cu_fail_assertion(const char *file, int line, const char *msg);
 void cu_set_out_prefix(const char *str);
+void cu_set_out_per_test(int yes);
 
 /** Timer **/
 #ifdef CU_ENABLE_TIMER
