@@ -110,7 +110,7 @@ Test functions are organized into test suites:
 Now, everything is prepared and all tests can be compiled, linked and run:
 
 1. We can use this Makefile (download it from here):
-```cpp
+```make
   CC ?= gcc
   CFLAGS = -g -Wall -pedantic --std=gnu99
   LDFLAGS = -Lcu/ -lcu
