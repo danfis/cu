@@ -153,4 +153,50 @@ const struct timespec *cuTimerStop(void);
 }
 #endif /* __cplusplus */
 
+
+
+/*
+ * Modifications by Sebastian Otto <https://www.github.com/Ohban>
+ */
+#include "config.h"
+
+/*
+ * enable tests per unit - for larger projects
+ */
+#ifdef CU_ENABLE_PER_UNIT_TESTS
+
+#ifdef TEST
+#undef TEST
+#endif
+
+#ifdef TEST_ADD
+#undef TEST_ADD
+#endif
+
+#ifdef TEST_SUITE
+#undef TEST_SUITE
+#endif
+
+#ifdef TEST_SUITE_ADD
+#undef TEST_SUITE_ADD
+#endif
+
+#ifndef UNIT
+#define UNIT DEFAULT
+#endif
+
+#define CU_CON(a, b) a##b
+#define CU_APPLY_1(a, b) a(b)
+#define CU_APPLY_2(a, b, c) a(b, c)
+#define CU_STR(x) #x
+
+#define CU_FULL CU_APPLY_2(CU_CON, UNIT, __)
+
+#define TEST(function) void CU_APPLY_2(CU_CON, CU_FULL, function)()
+#define TEST_ADD(function) { CU_APPLY_1(CU_STR, CU_APPLY_2(CU_CON, CU_FULL, function)), CU_APPLY_2(CU_CON, CU_FULL, function) }
+#define TEST_SUITE(name) cu_test_suite_t test_suite_##name[] =
+#define TEST_SUITE_ADD(name) { #name, test_suite_##name }
+
+#endif
+
 #endif
