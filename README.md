@@ -8,8 +8,10 @@ each other and any failure (such as segfault) does not break up the whole test.
 CU also provides script for regression tests based on output of test suites.
 
 ## License
-CU is distributed under the GNU Lesser General Public License v3.
-The GNU Lesser General Public License v3 should be available at http://www.gnu.org/licenses/lgpl.html
+CU is licensed under OSI-approved 3-clause BSD License, text of license
+is distributed along with source code in BSD-LICENSE file.
+Each file should include license notice, the rest should be considered as
+licensed under 3-clause BSD License.
 
 ## Tutorial
 
