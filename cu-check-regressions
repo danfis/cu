@@ -301,6 +301,13 @@ def main(files):
         if len(filenames[1]) == 0:
             MSGFAIL("", "===", "Can't compare %s %s, bacause %s does not exist!" % \
                     (filenames[0], filenames[0][4:], filenames[0][4:]))
+            MSGINFO(" -->", "Printing first %d lines:" % (MAX_DIFF_LINES))
+            data = open(filenames[0], 'r').read()
+            data = list(data.split('\n'))
+            if len(data[-1]) == 0:
+                data = data[:-1]
+            data = [x + '\n' for x in data]
+            dumpLines(data, "   |", True, MAX_DIFF_LINES)
             continue
 
         cmd = ["diff", filenames[0], filenames[1]]
@@ -341,7 +348,7 @@ def main(files):
                     if len(lines) > MAX_DIFF_LINES:
                         break;
                 dumpLines(lines, "   |", True, MAX_DIFF_LINES)
-                    
+
 def usage():
     prnl("Usage: " + sys.argv[0] + " [ OPTIONS ] [ directory, [ directory, [ ... ] ] ]")
     prnl("")
