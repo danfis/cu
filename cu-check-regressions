@@ -288,15 +288,6 @@ def dumpLines(lines, prefix = "", wait = False, max_lines = -1):
 def main(files):
     global MSG_BASE
 
-    # As first compute length of columns
-    len1 = 0
-    len2 = 0
-    for filenames in files:
-        if len(filenames[0]) > len1:
-            len1 = len(filenames[0])
-        if len(filenames[1]) > len2:
-            len2 = len(filenames[1])
-
     for filenames in files:
         if len(filenames[1]) == 0:
             MSGFAIL("", "===", "Can't compare %s %s, bacause %s does not exist!" % \
@@ -311,8 +302,7 @@ def main(files):
             continue
 
         cmd = ["diff", filenames[0], filenames[1]]
-        MSG_BASE = "Comparing %s and %s" % \
-                (filenames[0].ljust(len1) ,filenames[1].ljust(len2))
+        MSG_BASE = "Comparing {{tmp.,}}{0}".format(filenames[1])
         if not PROGRESS_ON:
             pr(MSG_BASE, flush = True)
 
