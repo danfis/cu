@@ -22,6 +22,8 @@ import sys
 import math
 from getopt import gnu_getopt, GetoptError
 
+RET = 0
+
 EPS = 6E-4
 BASE_DIR = "."
 MAX_DIFF_LINES = 20
@@ -267,6 +269,8 @@ def MSG(s = "", wait = False):
 def MSGOK(prestr = "", str = "", poststr = ""):
     prnl(prestr + " \033[0;32m" + str + "\033[0;0m " + poststr)
 def MSGFAIL(prestr = "", str = "", poststr = ""):
+    global RET
+    RET = -1
     prnl(prestr + " \033[0;31m" + str + "\033[0;0m " + poststr)
 def MSGINFO(prestr = "", str = "", poststr = ""):
     prnl(prestr + " \033[0;33m" + str + "\033[0;0m " + poststr)
@@ -405,4 +409,4 @@ else:
         files = regressionFilesInDir()
         main(files)
 
-sys.exit(0)
+sys.exit(RET)
