@@ -123,7 +123,7 @@ typedef struct _cu_test_suites_t {
 
 extern cu_test_suites_t cu_test_suites[];
 
-void cu_run(int argc, char *argv[]);
+int cu_run(int argc, char *argv[]);
 void cu_success_assertion(void);
 void cu_fail_assertion(const char *file, int line, const char *msg);
 void cu_set_out_prefix(const char *str);

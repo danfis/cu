@@ -81,7 +81,7 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *test_suite,
                         int test_id);
 static void cu_print_results(void);
 
-void cu_run(int argc, char *argv[])
+int cu_run(int argc, char *argv[])
 {
     cu_test_suites_t *tss;
     char *test_suite_name, *test_name;
@@ -115,7 +115,9 @@ void cu_run(int argc, char *argv[])
         cu_print_results();
     }
 
-
+    if (cu_fail_test_suites > 0)
+        return -1;
+    return 0;
 }
 
 static int cu_run_test_suite(const char *test_suite_name,
