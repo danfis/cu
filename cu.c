@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
+# include <time.h>
 
 #include "cu.h"
 
@@ -80,6 +81,8 @@ static int cu_run_test_suite(const char *test_suite_name,
 static void cu_run_fork(const char *ts_name, cu_test_suite_t *test_suite,
                         int test_id);
 static void cu_print_results(void);
+static float time_diff_seconds(const struct timespec *start,
+                               const struct timespec *end);
 
 int cu_run(int argc, char *argv[])
 {
@@ -168,6 +171,7 @@ static int cu_run_test_suite(const char *test_suite_name,
 static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts,
                         int test_id)
 {
+    struct timespec time_start, time_end;
     int pipefd[2];
     int pid;
     int status;
@@ -177,6 +181,7 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts,
         exit(-1);
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &time_start);
     fprintf(stdout, " -> %s [IN PROGESS]\n", ts_name);
     fflush(stdout);
 
@@ -226,7 +231,9 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts,
 
         close(fd);
 
-        fprintf(stdout, " -> %s [DONE]\n\n", ts_name);
+        clock_gettime(CLOCK_MONOTONIC, &time_end);
+        fprintf(stdout, " -> %s [DONE %.2fs]\n\n", ts_name,
+                time_diff_seconds(&time_start, &time_end));
         fflush(stdout);
     }
 
@@ -247,7 +254,7 @@ static int run_test(const char *t_name, cu_test_func_t t_func)
     cu_current_test = t_name;
 
     /* send message what test is currently running */
-    len = snprintf(buffer, MSGBUF_LEN, "%c    --> Running %s...\n",
+    len = snprintf(buffer, MSGBUF_LEN, "%c    --> %s\n",
                    TEST_NAME, cu_current_test);
     write(fd, buffer, len);
 
@@ -312,25 +319,27 @@ static void receive_messages(void)
         for (i=0; i < buf_len; i++){
 
             /* Prepare message for printing out */
-            if (state == 1 || state == 2){
-                if (bufout_len < MSGBUF_LEN)
-                    bufout[bufout_len++] = buf[i];
-            }
 
             /* reset state on '\n' in msg */
             if (buf[i] == '\n'){
                 /* copy messages out */
-                if (state == 1)
+                if (state == 1){
                     write(1, bufout, bufout_len);
-                if (state == 2)
+                    write(1, "\n", 1);
+                }
+                if (state == 2){
                     write(2, bufout, bufout_len);
+                    write(2, "\n", 1);
+                }
 
                 state = 0;
                 bufout_len = 0;
-                continue;
-            }
 
-            if (state == 0){
+            }else if (state == 1 || state == 2){
+                if (bufout_len < MSGBUF_LEN)
+                    bufout[bufout_len++] = buf[i];
+
+            }else if (state == 0){
                 if (buf[i] == CHECK_FAILED){
                     cu_fail_checks++;
                     state = 2;
@@ -470,3 +479,23 @@ const struct timespec *cuTimerStop(void)
     return &__cu_timer;
 }
 #endif /* CU_ENABLE_TIMER */
+
+static float time_diff_seconds(const struct timespec *start,
+                               const struct timespec *end)
+{
+    struct timespec diff;
+    float sec;
+
+    /* store into t difference between time_start and time_end */
+    if (end->tv_nsec > start->tv_nsec){
+        diff.tv_nsec = end->tv_nsec - start->tv_nsec;
+        diff.tv_sec = end->tv_sec - start->tv_sec;
+    }else{
+        diff.tv_nsec = end->tv_nsec + 1000000000L - start->tv_nsec;
+        diff.tv_sec = end->tv_sec - 1 - start->tv_sec;
+    }
+
+    sec  = diff.tv_nsec / 1000000000.f;
+    sec += diff.tv_sec;
+    return sec;
+}
