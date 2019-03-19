@@ -241,6 +241,7 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts,
 
 static int run_test(const char *t_name, cu_test_func_t t_func)
 {
+    struct timespec time_start, time_end;
     int test_suite_failed = 0;
     char buffer[MSGBUF_LEN];
     int len;
@@ -254,12 +255,19 @@ static int run_test(const char *t_name, cu_test_func_t t_func)
     cu_current_test = t_name;
 
     /* send message what test is currently running */
-    len = snprintf(buffer, MSGBUF_LEN, "%c    --> %s\n",
+    len = snprintf(buffer, MSGBUF_LEN, "%c    --> %s ...\n",
                    TEST_NAME, cu_current_test);
     write(fd, buffer, len);
+    fsync(fd);
 
     /* run test */
+    clock_gettime(CLOCK_MONOTONIC, &time_start);
     (*(t_func))();
+    clock_gettime(CLOCK_MONOTONIC, &time_end);
+    len = snprintf(buffer, MSGBUF_LEN, "%c    --> %s [DONE %.4fs]\n",
+                   TEST_NAME, cu_current_test,
+                   time_diff_seconds(&time_start, &time_end));
+    write(fd, buffer, len);
 
     if (test_failed){
         MSG_TEST_FAILED;
