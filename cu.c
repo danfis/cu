@@ -227,6 +227,13 @@ static void cu_run_fork(const char *ts_name, cu_test_suite_t *ts,
             /* mark this test suite as failed, because was terminated
              * prematurely */
             cu_fail_test_suites++;
+        }else{
+            int exit_status = WEXITSTATUS(status);
+            if (exit_status != 0){
+                fprintf(stdout, "Test suite terminated with exit status %d.\n",
+                        exit_status);
+                cu_fail_test_suites++;
+            }
         }
 
         close(fd);
